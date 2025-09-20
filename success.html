@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Successful - Ace AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f1f8f5 0%, #eafaf2 50%, #f7fbf9 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+            animation: successPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes successPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 12px;
+        }
+        
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .plan-info {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .plan-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        
+        .plan-price {
+            font-size: 24px;
+            font-weight: 700;
+            color: #10b981;
+            margin-bottom: 4px;
+        }
+        
+        .plan-period {
+            color: #64748b;
+            font-size: 14px;
+        }
+        
+        .payment-details {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .payment-details h3 {
+            color: #166534;
+            font-size: 16px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .detail-label {
+            color: #64748b;
+        }
+        
+        .detail-value {
+            color: #0f172a;
+            font-weight: 500;
+            font-family: monospace;
+        }
+        
+        .return-button {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .return-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+        
+        .back-button {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .back-button:hover {
+            color: #10b981;
+        }
+        
+        .features {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .features h3 {
+            color: #0f172a;
+            font-size: 16px;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #64748b;
+        }
+        
+        .feature-icon {
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .countdown {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="success-icon">✓</div>
+        <h1 class="title">Payment Successful!</h1>
+        <p class="subtitle">Your subscription has been activated successfully</p>
+        
+        <div class="plan-info">
+            <div class="plan-name" id="planName">Loading...</div>
+            <div class="plan-price" id="planPrice">₹0</div>
+            <div class="plan-period" id="planPeriod">per month</div>
+        </div>
+        
+        <div class="payment-details">
+            <h3>Payment Details</h3>
+            <div class="detail-row">
+                <span class="detail-label">Payment ID:</span>
+                <span class="detail-value" id="paymentId">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Order ID:</span>
+                <span class="detail-value" id="orderId">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Amount:</span>
+                <span class="detail-value" id="amount">-</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Status:</span>
+                <span class="detail-value" style="color: #10b981;">Completed</span>
+            </div>
+        </div>
+        
+        <div class="features">
+            <h3>What's Next?</h3>
+            <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span>Your plan is now active</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span>Access all premium features</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span>Unlimited AI conversations</span>
+            </div>
+            <div class="feature-item">
+                <span class="feature-icon">✓</span>
+                <span>Priority support</span>
+            </div>
+        </div>
+        
+        <div class="countdown">
+            <strong>Returning to app in <span id="countdown">10</span> seconds...</span>
+        </div>
+        
+        <button class="return-button" onclick="returnToApp()">
+            Return to Ace AI App
+        </button>
+        
+        <a href="#" class="back-button" onclick="goBack()">
+            ← Stay on this page
+        </a>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const paymentId = urlParams.get('paymentId');
+        const orderId = urlParams.get('orderId');
+        const signature = urlParams.get('signature');
+        const plan = urlParams.get('plan') || 'starter';
+        
+        const planDetails = {
+            starter: { name: 'Starter Plan', price: '₹299', period: 'per month' },
+            pro: { name: 'Pro Plan', price: '₹599', period: 'per month' },
+            ultra: { name: 'Ultra Plan', price: '₹999', period: 'per month' }
+        };
+        
+        function updatePlanInfo() {
+            const planInfo = planDetails[plan] || planDetails.starter;
+            document.getElementById('planName').textContent = planInfo.name;
+            document.getElementById('planPrice').textContent = planInfo.price;
+            document.getElementById('planPeriod').textContent = planInfo.period;
+        }
+        
+        function updatePaymentDetails() {
+            document.getElementById('paymentId').textContent = paymentId || '-';
+            document.getElementById('orderId').textContent = orderId || '-';
+            document.getElementById('amount').textContent = planDetails[plan]?.price || '-';
+        }
+        
+        function startCountdown() {
+            let count = 10;
+            const countdownElement = document.getElementById('countdown');
+            
+            const timer = setInterval(() => {
+                countdownElement.textContent = count;
+                count--;
+                
+                if (count < 0) {
+                    clearInterval(timer);
+                    returnToApp();
+                }
+            }, 1000);
+        }
+        
+        function returnToApp() {
+            // Try to redirect back to the app using deep linking
+            const appScheme = 'aceai://payment-success';
+            const webUrl = 'https://aceai.app/payment-success';
+            
+            // First try the app scheme
+            window.location.href = appScheme;
+            
+            // Fallback to web URL after a short delay
+            setTimeout(() => {
+                window.location.href = webUrl;
+            }, 1000);
+        }
+        
+        function goBack() {
+            // Stop the countdown and stay on the page
+            const countdownElement = document.getElementById('countdown');
+            countdownElement.textContent = '∞';
+        }
+        
+        // Initialize the page
+        updatePlanInfo();
+        updatePaymentDetails();
+        startCountdown();
+        
+        // Send payment success data to the app if possible
+        if (window.ReactNativeWebView) {
+            const paymentData = {
+                type: 'payment_success',
+                paymentId: paymentId,
+                orderId: orderId,
+                signature: signature,
+                plan: plan
+            };
+            window.ReactNativeWebView.postMessage(JSON.stringify(paymentData));
+        }
+    </script>
+</body>
+</html>

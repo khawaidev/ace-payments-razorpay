@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ace AI - Payment</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f1f8f5 0%, #eafaf2 50%, #f7fbf9 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .logo {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 20px;
+            background: linear-gradient(135deg, #10b981, #34d399);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        
+        .subtitle {
+            color: #64748b;
+            margin-bottom: 30px;
+        }
+        
+        .plan-info {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .plan-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        
+        .plan-price {
+            font-size: 32px;
+            font-weight: 700;
+            color: #10b981;
+            margin-bottom: 4px;
+        }
+        
+        .plan-period {
+            color: #64748b;
+            font-size: 14px;
+        }
+        
+        .payment-button {
+            background: linear-gradient(135deg, #10b981, #34d399);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .payment-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+        
+        .payment-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            color: #64748b;
+        }
+        
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #10b981;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #dc2626;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        .back-button {
+            color: #64748b;
+            text-decoration: none;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .back-button:hover {
+            color: #10b981;
+        }
+        
+        .upi-info {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">A</div>
+        <h1 class="title">Complete Your Payment</h1>
+        <p class="subtitle">Secure payment powered by Razorpay</p>
+        
+        <div class="plan-info">
+            <div class="plan-name" id="planName">Loading...</div>
+            <div class="plan-price" id="planPrice">₹0</div>
+            <div class="plan-period" id="planPeriod">per month</div>
+        </div>
+        
+        <div class="upi-info">
+            💡 UPI payments will show your available UPI apps for easy payment
+        </div>
+        
+        <div class="error" id="errorMessage"></div>
+        
+        <button class="payment-button" id="payButton" onclick="initiatePayment()">
+            Pay Now
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <span>Processing payment...</span>
+        </div>
+        
+        <a href="#" class="back-button" onclick="goBack()">
+            ← Back to App
+        </a>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const plan = urlParams.get('plan') || 'starter';
+        const orderId = urlParams.get('orderId');
+        const amount = urlParams.get('amount');
+        const currency = urlParams.get('currency') || 'INR';
+        const userEmail = urlParams.get('email') || '';
+        const userName = urlParams.get('name') || 'Ace User';
+        
+        const planDetails = {
+            starter: { name: 'Starter Plan', price: '₹299', period: 'per month' },
+            pro: { name: 'Pro Plan', price: '₹599', period: 'per month' },
+            ultra: { name: 'Ultra Plan', price: '₹999', period: 'per month' }
+        };
+        
+        function updatePlanInfo() {
+            const planInfo = planDetails[plan] || planDetails.starter;
+            document.getElementById('planName').textContent = planInfo.name;
+            document.getElementById('planPrice').textContent = planInfo.price;
+            document.getElementById('planPeriod').textContent = planInfo.period;
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            document.getElementById('payButton').disabled = false;
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        function showLoading() {
+            document.getElementById('payButton').disabled = true;
+            document.getElementById('loading').style.display = 'flex';
+            document.getElementById('errorMessage').style.display = 'none';
+        }
+        
+        function hideLoading() {
+            document.getElementById('payButton').disabled = false;
+            document.getElementById('loading').style.display = 'none';
+        }
+        
+        function initiatePayment() {
+            if (!orderId || !amount) {
+                showError('Missing payment information. Please try again from the app.');
+                return;
+            }
+            
+            showLoading();
+            
+            const options = {
+                key: window.RAZORPAY_KEY_ID, // Will be injected by server
+                amount: parseInt(amount),
+                currency: currency,
+                name: 'Ace AI',
+                description: `Ace AI ${planDetails[plan]?.name || 'Plan'}`,
+                order_id: orderId,
+                prefill: {
+                    name: userName,
+                    email: userEmail
+                },
+                theme: {
+                    color: '#10b981'
+                },
+                handler: function (response) {
+                    // Redirect to success page
+                    const successUrl = `success.html?paymentId=${response.razorpay_payment_id}&orderId=${response.razorpay_order_id}&signature=${response.razorpay_signature}&plan=${plan}`;
+                    window.location.href = successUrl;
+                },
+                modal: {
+                    ondismiss: function() {
+                        hideLoading();
+                    }
+                },
+                retry: {
+                    enabled: true,
+                    max_count: 3
+                }
+            };
+            
+            const rzp = new Razorpay(options);
+            rzp.on('payment.failed', function (response) {
+                hideLoading();
+                showError('Payment failed. Please try again.');
+                console.error('Payment failed:', response.error);
+            });
+            
+            rzp.open();
+        }
+        
+        function goBack() {
+            // Try to close the window or go back
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                window.close();
+            }
+        }
+        
+        // Initialize the page
+        updatePlanInfo();
+        
+        // Auto-initiate payment if orderId is present
+        if (orderId && amount) {
+            setTimeout(() => {
+                initiatePayment();
+            }, 1000);
+        }
+    </script>
+</body>
+</html>
