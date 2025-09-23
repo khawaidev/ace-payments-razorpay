@@ -214,7 +214,7 @@
         const planDetails = {
             pro: { name: 'Pro', price: '₹499', period: 'per month' },
             pro_plus: { name: 'Pro+', price: '₹999', period: 'per month' },
-            ultra_plus: { name: 'Ultra+', price: '₹1999', period: 'per month' }
+            ultra: { name: 'Ultra', price: '₹1999', period: 'per month' }
         };
         
         function updatePlanInfo() {
@@ -265,6 +265,8 @@
                 theme: {
                     color: '#000000' // black theme
                 },
+                callback_url: `${window.location.origin}/success?plan=${encodeURIComponent(plan)}`,
+                redirect: true,
                 handler: async function (response) {
                     // Call backend to verify and record payment, then deep link back to app
                     try {
@@ -334,4 +336,3 @@
     </script>
 </body>
 </html>
-
