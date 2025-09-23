@@ -9,6 +9,7 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname)));
 
 // Routes
@@ -25,6 +26,16 @@ app.get('/', (req, res) => {
 
 app.get('/success', (req, res) => {
     res.sendFile(path.join(__dirname, 'success.html'));
+});
+
+// Support Razorpay callback_url POST (redirect:true) by converting POST body to query params
+app.post('/success', (req, res) => {
+    const paymentId = req.body.razorpay_payment_id || '';
+    const orderId = req.body.razorpay_order_id || '';
+    const signature = req.body.razorpay_signature || '';
+    const plan = req.body.plan || req.query.plan || '';
+    const q = new URLSearchParams({ paymentId, orderId, signature, plan }).toString();
+    return res.redirect(`/success?${q}`);
 });
 
 // Create payment order
