@@ -2,9 +2,17 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const { createRazorpayOrder, recordPaymentSuccess } = require('./payment-service');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Supabase admin client (service role)
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAdmin = (supabaseUrl && supabaseServiceRoleKey)
+  ? createClient(supabaseUrl, supabaseServiceRoleKey)
+  : null;
 
 // Middleware
 app.use(cors());
@@ -82,6 +90,50 @@ app.post('/api/verify-payment', async (req, res) => {
             userId
         });
         
+        // Persist to Supabase (mark payment captured, upsert subscription, update profile)
+        if (!supabaseAdmin) {
+            console.warn('Supabase admin client not configured; skipping DB update');
+        } else {
+            // Update payment
+            const { error: updatePaymentError } = await supabaseAdmin
+              .from('payments')
+              .update({
+                razorpay_payment_id: paymentId,
+                razorpay_signature: signature,
+                status: 'captured',
+                updated_at: new Date().toISOString()
+              })
+              .eq('razorpay_order_id', orderId)
+              .eq('user_id', userId);
+            if (updatePaymentError) {
+              console.error('Supabase payment update error:', updatePaymentError);
+            }
+
+            // Upsert subscription
+            const { error: subscriptionError } = await supabaseAdmin
+              .from('subscriptions')
+              .upsert({
+                user_id: userId,
+                plan_id: plan,
+                status: 'active',
+                razorpay_payment_id: paymentId,
+                current_period_start: new Date().toISOString(),
+                current_period_end: new Date(Date.now() + 30*24*60*60*1000).toISOString(),
+              }, { onConflict: 'user_id', ignoreDuplicates: false });
+            if (subscriptionError) {
+              console.error('Supabase subscription upsert error:', subscriptionError);
+            }
+
+            // Update profile plan
+            const { error: profileError } = await supabaseAdmin
+              .from('profiles')
+              .update({ plan })
+              .eq('id', userId);
+            if (profileError) {
+              console.error('Supabase profile update error:', profileError);
+            }
+        }
+
         res.json({ success: true, result });
     } catch (error) {
         console.error('Error verifying payment:', error);
@@ -111,6 +163,9 @@ function validateEnvironment() {
     console.log('✅ Environment variables validated');
     console.log(`🔑 Razorpay Key ID: ${process.env.RAZORPAY_KEY_ID.substring(0, 8)}...`);
     console.log(`🔐 Razorpay Secret: ${process.env.RAZORPAY_KEY_SECRET.substring(0, 8)}...`);
+    if (!supabaseAdmin) {
+      console.warn('⚠️  SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY not set; payments may remain pending in DB');
+    }
 }
 
 // Start server
