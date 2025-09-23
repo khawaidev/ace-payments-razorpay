@@ -7,25 +7,26 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET
 });
 
-// Plan configurations
+// Plan configurations aligned with Supabase pricing_plans
+// Amounts are in paise (match aceai/supabase-setup.sql monthly price)
 const PLAN_CONFIGS = {
-    starter: {
-        name: 'Starter Plan',
-        amount: 29900, // Amount in paise (₹299)
-        currency: 'INR',
-        description: 'Perfect for getting started with AI learning'
-    },
     pro: {
-        name: 'Pro Plan',
-        amount: 59900, // Amount in paise (₹599)
+        name: 'Pro',
+        amount: 49900,
         currency: 'INR',
-        description: 'Advanced features for serious learners'
+        description: 'Most popular choice'
     },
-    ultra: {
-        name: 'Ultra Plan',
-        amount: 99900, // Amount in paise (₹999)
+    pro_plus: {
+        name: 'Pro+',
+        amount: 99900,
         currency: 'INR',
-        description: 'Complete access to all premium features'
+        description: 'For advanced learners'
+    },
+    ultra_plus: {
+        name: 'Ultra+',
+        amount: 199900,
+        currency: 'INR',
+        description: 'Power users with live tutor features'
     }
 };
 
@@ -109,15 +110,12 @@ async function recordPaymentSuccess({ orderId, paymentId, signature, plan, userI
             throw new Error('Invalid payment signature');
         }
 
-        // Here you would typically:
-        // 1. Update user's subscription in your database
-        // 2. Send confirmation email
-        // 3. Log the transaction
-        // 4. Update analytics
-        
-        // For now, we'll just return success
         const planConfig = PLAN_CONFIGS[plan];
+        if (!planConfig) {
+            throw new Error(`Invalid plan: ${plan}`);
+        }
         
+        // In a real deployment, update subscription in DB here
         return {
             success: true,
             orderId: orderId,
@@ -159,3 +157,4 @@ module.exports = {
     getPlanDetails,
     getAllPlans
 };
+
