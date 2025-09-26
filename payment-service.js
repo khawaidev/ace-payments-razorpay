@@ -117,8 +117,16 @@ function verifyPaymentSignature(orderId, paymentId, signature) {
  */
 async function recordPaymentSuccess({ orderId, paymentId, signature, plan, userId }) {
     try {
+        console.log('Starting payment verification:', { orderId, paymentId, plan, userId });
+        
+        // Validate required parameters
+        if (!orderId || !paymentId || !signature || !plan || !userId) {
+            throw new Error(`Missing required parameters: orderId=${!!orderId}, paymentId=${!!paymentId}, signature=${!!signature}, plan=${!!plan}, userId=${!!userId}`);
+        }
+        
         // Verify the payment signature
         const isValidSignature = verifyPaymentSignature(orderId, paymentId, signature);
+        console.log('Signature verification result:', isValidSignature);
         
         if (!isValidSignature) {
             throw new Error('Invalid payment signature');
