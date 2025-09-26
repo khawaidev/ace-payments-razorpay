@@ -45,7 +45,8 @@ app.post('/success', async (req, res) => {
         const plan = req.body.plan || req.query.plan || '';
         const userId = req.body.userId || req.query.userId || '';
 
-        // Verify and persist (same as /api/verify-payment)
+        // Verify and persist (recordPaymentSuccess now handles all DB operations)
+        console.log('Verifying payment:', { orderId, paymentId, plan, userId });
         const result = await recordPaymentSuccess({
             orderId,
             paymentId,
@@ -53,47 +54,7 @@ app.post('/success', async (req, res) => {
             plan,
             userId
         });
-
-        if (supabaseAdmin) {
-            // Update payment
-            const { error: updatePaymentError } = await supabaseAdmin
-              .from('payments')
-              .update({
-                razorpay_payment_id: paymentId,
-                razorpay_signature: signature,
-                status: 'captured',
-                updated_at: new Date().toISOString()
-              })
-              .eq('razorpay_order_id', orderId)
-              .eq('user_id', userId);
-            if (updatePaymentError) {
-              console.error('Supabase payment update error:', updatePaymentError);
-            }
-
-            // Upsert subscription
-            const { error: subscriptionError } = await supabaseAdmin
-              .from('subscriptions')
-              .upsert({
-                user_id: userId,
-                plan_id: plan,
-                status: 'active',
-                razorpay_payment_id: paymentId,
-                current_period_start: new Date().toISOString(),
-                current_period_end: new Date(Date.now() + 30*24*60*60*1000).toISOString(),
-              }, { onConflict: 'user_id', ignoreDuplicates: false });
-            if (subscriptionError) {
-              console.error('Supabase subscription upsert error:', subscriptionError);
-            }
-
-            // Update profile plan
-            const { error: profileError } = await supabaseAdmin
-              .from('profiles')
-              .update({ plan })
-              .eq('id', userId);
-            if (profileError) {
-              console.error('Supabase profile update error:', profileError);
-            }
-        }
+        console.log('Payment verification result:', result);
 
         const q = new URLSearchParams({ paymentId, orderId, signature, plan }).toString();
         return res.redirect(`/success?${q}`);
@@ -257,4 +218,5 @@ app.listen(PORT, () => {
     console.log(`🌐 Access the payment page at: http://localhost:${PORT}`);
     console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
 });
+
 
