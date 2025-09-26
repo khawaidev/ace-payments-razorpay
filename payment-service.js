@@ -158,9 +158,19 @@ async function recordPaymentSuccess({ orderId, paymentId, signature, plan, userI
                 }
 
                 // Upsert subscription (based on db.sql structure)
-                const { error: subscriptionError } = await supabaseAdmin
+                // First try to update existing subscription
+                const { data: existingSub, error: fetchError } = await supabaseAdmin
                   .from('subscriptions')
-                  .upsert({
+                  .select('id')
+                  .eq('user_id', userId)
+                  .single();
+                
+                if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 = no rows found
+                    console.error('Error fetching existing subscription:', fetchError);
+                    throw new Error('Failed to check existing subscription');
+                }
+                
+                const subscriptionData = {
                     user_id: userId,
                     plan_id: plan,
                     provider: 'razorpay',
@@ -168,7 +178,23 @@ async function recordPaymentSuccess({ orderId, paymentId, signature, plan, userI
                     razorpay_payment_id: paymentId,
                     current_period_start: new Date().toISOString(),
                     current_period_end: new Date(Date.now() + 30*24*60*60*1000).toISOString(),
-                  }, { onConflict: 'user_id', ignoreDuplicates: false });
+                };
+                
+                let subscriptionError;
+                if (existingSub) {
+                    // Update existing subscription
+                    const { error } = await supabaseAdmin
+                      .from('subscriptions')
+                      .update(subscriptionData)
+                      .eq('user_id', userId);
+                    subscriptionError = error;
+                } else {
+                    // Insert new subscription
+                    const { error } = await supabaseAdmin
+                      .from('subscriptions')
+                      .insert(subscriptionData);
+                    subscriptionError = error;
+                }
                 
                 if (subscriptionError) {
                     console.error('Supabase subscription upsert error:', subscriptionError);
