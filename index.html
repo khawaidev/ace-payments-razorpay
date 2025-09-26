@@ -171,7 +171,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="logo">A</div>
+        <img class="logo" src="https://i.ibb.co/SXJGk0Yf/box-3.png">
         <h1 class="title">Complete Your Payment</h1>
         <p class="subtitle">Secure payment powered by Razorpay</p>
         
@@ -265,7 +265,7 @@
                 theme: {
                     color: '#000000' // black theme
                 },
-                callback_url: `${window.location.origin}/success?plan=${encodeURIComponent(plan)}`,
+                callback_url: `${window.location.origin}/success?plan=${encodeURIComponent(plan)}&userId=${encodeURIComponent(userId)}`,
                 redirect: true,
                 handler: async function (response) {
                     // Call backend to verify and record payment, then deep link back to app
