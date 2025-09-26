@@ -1,11 +1,19 @@
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
 
 // Initialize Razorpay
 const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET
 });
+
+// Initialize Supabase client (service role for admin operations)
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAdmin = (supabaseUrl && supabaseServiceRoleKey)
+  ? createClient(supabaseUrl, supabaseServiceRoleKey)
+  : null;
 
 // Plan configurations aligned with Supabase pricing_plans
 // Amounts are in paise (match aceai/supabase-setup.sql monthly price)
@@ -121,7 +129,64 @@ async function recordPaymentSuccess({ orderId, paymentId, signature, plan, userI
             throw new Error(`Invalid plan: ${plan}`);
         }
         
-        // In a real deployment, update subscription in DB here
+        // Persist to Supabase if admin client is available
+        if (supabaseAdmin) {
+            try {
+                // Update payment record to captured
+                const { error: updatePaymentError } = await supabaseAdmin
+                  .from('payments')
+                  .update({
+                    razorpay_payment_id: paymentId,
+                    razorpay_signature: signature,
+                    status: 'captured',
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('razorpay_order_id', orderId)
+                  .eq('user_id', userId);
+                
+                if (updatePaymentError) {
+                    console.error('Supabase payment update error:', updatePaymentError);
+                    throw new Error('Failed to update payment record');
+                }
+
+                // Upsert subscription (based on db.sql structure)
+                const { error: subscriptionError } = await supabaseAdmin
+                  .from('subscriptions')
+                  .upsert({
+                    user_id: userId,
+                    plan_id: plan,
+                    provider: 'razorpay',
+                    status: 'active',
+                    razorpay_payment_id: paymentId,
+                    current_period_start: new Date().toISOString(),
+                    current_period_end: new Date(Date.now() + 30*24*60*60*1000).toISOString(),
+                  }, { onConflict: 'user_id', ignoreDuplicates: false });
+                
+                if (subscriptionError) {
+                    console.error('Supabase subscription upsert error:', subscriptionError);
+                    throw new Error('Failed to create/update subscription');
+                }
+
+                // Update user profile plan
+                const { error: profileError } = await supabaseAdmin
+                  .from('profiles')
+                  .update({ plan })
+                  .eq('id', userId);
+                
+                if (profileError) {
+                    console.error('Supabase profile update error:', profileError);
+                    throw new Error('Failed to update user profile');
+                }
+
+                console.log(`✅ Payment confirmed and subscription activated for user ${userId}, plan ${plan}`);
+            } catch (dbError) {
+                console.error('Database persistence error:', dbError);
+                throw new Error(`Payment verification succeeded but database update failed: ${dbError.message}`);
+            }
+        } else {
+            console.warn('⚠️  Supabase admin client not configured; skipping DB persistence');
+        }
+        
         return {
             success: true,
             orderId: orderId,
@@ -163,6 +228,7 @@ module.exports = {
     getPlanDetails,
     getAllPlans
 };
+
 
 
 
