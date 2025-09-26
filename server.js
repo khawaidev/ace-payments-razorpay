@@ -37,13 +37,70 @@ app.get('/success', (req, res) => {
 });
 
 // Support Razorpay callback_url POST (redirect:true) by converting POST body to query params
-app.post('/success', (req, res) => {
-    const paymentId = req.body.razorpay_payment_id || '';
-    const orderId = req.body.razorpay_order_id || '';
-    const signature = req.body.razorpay_signature || '';
-    const plan = req.body.plan || req.query.plan || '';
-    const q = new URLSearchParams({ paymentId, orderId, signature, plan }).toString();
-    return res.redirect(`/success?${q}`);
+app.post('/success', async (req, res) => {
+    try {
+        const paymentId = req.body.razorpay_payment_id || '';
+        const orderId = req.body.razorpay_order_id || '';
+        const signature = req.body.razorpay_signature || '';
+        const plan = req.body.plan || req.query.plan || '';
+        const userId = req.body.userId || req.query.userId || '';
+
+        // Verify and persist (same as /api/verify-payment)
+        const result = await recordPaymentSuccess({
+            orderId,
+            paymentId,
+            signature,
+            plan,
+            userId
+        });
+
+        if (supabaseAdmin) {
+            // Update payment
+            const { error: updatePaymentError } = await supabaseAdmin
+              .from('payments')
+              .update({
+                razorpay_payment_id: paymentId,
+                razorpay_signature: signature,
+                status: 'captured',
+                updated_at: new Date().toISOString()
+              })
+              .eq('razorpay_order_id', orderId)
+              .eq('user_id', userId);
+            if (updatePaymentError) {
+              console.error('Supabase payment update error:', updatePaymentError);
+            }
+
+            // Upsert subscription
+            const { error: subscriptionError } = await supabaseAdmin
+              .from('subscriptions')
+              .upsert({
+                user_id: userId,
+                plan_id: plan,
+                status: 'active',
+                razorpay_payment_id: paymentId,
+                current_period_start: new Date().toISOString(),
+                current_period_end: new Date(Date.now() + 30*24*60*60*1000).toISOString(),
+              }, { onConflict: 'user_id', ignoreDuplicates: false });
+            if (subscriptionError) {
+              console.error('Supabase subscription upsert error:', subscriptionError);
+            }
+
+            // Update profile plan
+            const { error: profileError } = await supabaseAdmin
+              .from('profiles')
+              .update({ plan })
+              .eq('id', userId);
+            if (profileError) {
+              console.error('Supabase profile update error:', profileError);
+            }
+        }
+
+        const q = new URLSearchParams({ paymentId, orderId, signature, plan }).toString();
+        return res.redirect(`/success?${q}`);
+    } catch (err) {
+        console.error('POST /success verification error:', err);
+        return res.status(500).send('Payment verification failed.');
+    }
 });
 
 // Create payment order
