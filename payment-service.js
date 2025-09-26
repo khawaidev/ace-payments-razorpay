@@ -12,19 +12,19 @@ const razorpay = new Razorpay({
 const PLAN_CONFIGS = {
     pro: {
         name: 'Pro',
-        amount: 49900,
+        amount: 100,
         currency: 'INR',
         description: 'Most popular choice'
     },
     pro_plus: {
         name: 'Pro+',
-        amount: 99900,
+        amount: 100,
         currency: 'INR',
         description: 'For advanced learners'
     },
     ultra: {
         name: 'Ultra',
-        amount: 199900,
+        amount: 100,
         currency: 'INR',
         description: 'Power users with live tutor features'
     }
