@@ -22,8 +22,8 @@ const PLAN_CONFIGS = {
         currency: 'INR',
         description: 'For advanced learners'
     },
-    ultra_plus: {
-        name: 'Ultra+',
+    ultra: {
+        name: 'Ultra',
         amount: 199900,
         currency: 'INR',
         description: 'Power users with live tutor features'
@@ -43,7 +43,7 @@ async function createRazorpayOrder(plan, userId, userEmail = '', userName = 'Ace
         const planConfig = PLAN_CONFIGS[plan];
         if (!planConfig) {
             throw new Error(`Invalid plan: ${plan}`);
-        }
+            }
 
         const options = {
             amount: planConfig.amount,
@@ -71,7 +71,9 @@ async function createRazorpayOrder(plan, userId, userEmail = '', userName = 'Ace
         };
     } catch (error) {
         console.error('Error creating Razorpay order:', error);
-        throw new Error('Failed to create payment order');
+        // Bubble up the most useful message (Razorpay SDK often nests it under error.error.description)
+        const message = (error && (error.error && error.error.description)) || error?.message || 'Failed to create payment order';
+        throw new Error(message);
     }
 }
 
@@ -157,4 +159,5 @@ module.exports = {
     getPlanDetails,
     getAllPlans
 };
+
 
