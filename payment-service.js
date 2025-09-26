@@ -45,10 +45,14 @@ async function createRazorpayOrder(plan, userId, userEmail = '', userName = 'Ace
             throw new Error(`Invalid plan: ${plan}`);
             }
 
+        // Build a short receipt to satisfy Razorpay's 40-char limit
+        const shortUserId = (userId || '').toString().slice(0, 10);
+        const receipt = `ace_${plan}_${shortUserId}_${Date.now()}`.slice(0, 40);
+
         const options = {
             amount: planConfig.amount,
             currency: planConfig.currency,
-            receipt: `aceai_${plan}_${userId}_${Date.now()}`,
+            receipt,
             notes: {
                 plan: plan,
                 userId: userId,
@@ -159,5 +163,6 @@ module.exports = {
     getPlanDetails,
     getAllPlans
 };
+
 
 
