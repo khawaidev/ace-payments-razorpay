@@ -61,6 +61,31 @@ app.post('/api/create-order', async (req, res) => {
         }
         
         const order = await createRazorpayOrder(plan, userId, userEmail, userName);
+
+        // Persist pending payment record so verification can update it later
+        if (supabaseAdmin) {
+            try {
+                const amount = typeof order.amount === 'number' ? order.amount : parseInt(order.amount, 10);
+                await supabaseAdmin
+                  .from('payments')
+                  .insert({
+                    user_id: userId,
+                    provider: 'razorpay',
+                    razorpay_order_id: order.id,
+                    amount: isNaN(amount) ? null : amount,
+                    currency: order.currency || 'INR',
+                    status: 'pending',
+                    plan_id: plan,
+                    metadata: {
+                      planName: order.planName,
+                      planDescription: order.planDescription,
+                    }
+                  });
+            } catch (dbErr) {
+                console.error('Supabase insert pending payment error:', dbErr);
+            }
+        }
+
         res.json(order);
     } catch (error) {
         console.error('Error creating order:', error);
